@@ -100,11 +100,14 @@ class ESC50(object):
                 if len(errors) > 0:
                     print(f'{row["filename"]} incorrect. {", ".join(errors)}')
 
-    def to_mnist(self, train_folds=[], test_folds=[], cache_path:str = None, n_fft = 1024, hop_length = None, flatten = True):
+    def to_mnist(self, train_folds=[], test_folds=[], cache_path:str = None, n_fft:int = 1024, hop_length:int = None, flatten = True):
         
         # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         # x_train = arrays of data in [0:255] range
         # y_train = label (class)
+
+        if hop_length is None:
+            hop_length = int(n_fft / 4)
 
         all_records = zip(self.get_folds(), self.get_filenames(), self.get_targets())
         
@@ -113,32 +116,22 @@ class ESC50(object):
         
         x_test = []
         y_test = []
+        
+        shape = None
+    
+        for folds, x, y in [(train_folds, x_train, y_train), (test_folds, x_test, y_test)]:
+            for fold, filename, target in [x for x in all_records if x[0] in folds]:
+                audio = self.get_audio(filename)
 
-        for train_record in [x for x in all_records if x[0] in train_folds]:
-            filename = train_record[1]
-            target = train_record[2]
+                if audio is None:
+                    continue
+                
+                spectrogram = audio.get_spectrogram_array_uint8(n_fft = n_fft, hop_length = hop_length)
+                shape = spectrogram.shape
+                x.append(spectrogram.flatten() if flatten else spectrogram)
+                y.append(target)
 
-            audio = self.get_audio(filename)
-            if audio is None:
-                continue
-            
-            spectrogram = audio.get_spectrogram_array_uint8(n_ftt = n_fft, hop_length = hop_length)
-            x_test.append(np.reshape(len(spectrogram)) if flatten else spectrogram)
-            y_train.append(target)
-
-        for test_record in [x for x in all_records if x[0] in test_folds]:
-            filename = test_record[1]
-            target = test_record[2]
-
-            audio = self.get_audio(filename)
-            if audio is None:
-                continue
-
-            spectrogram = audio.get_spectrogram_array_uint8(n_ftt = n_fft, hop_length = hop_length)
-            x_test.append(np.reshape(len(spectrogram)) if flatten else spectrogram)
-            y_test.append(target)
-
-        return x_train, y_train, x_test, y_test
+        return x_train, y_train, x_test, y_test, shape
 
     def generate_spectrograms(dest_path:str = None, dest_exists_ok = False, scale_mode = 'linear', image_exists_mode = 'replace'):
         if dest_path is None:
