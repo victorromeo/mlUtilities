@@ -131,6 +131,20 @@ class Audio(object):
         assert self.samples is not None and self.samples > 0, 'Not loaded'
         return Audio().populate(librosa.resample(self.data,self.sample_rate, target_sample_rate, res_type='fft'), target_sample_rate, self.source_path, self.operations + [_resampleOperation(self.sample_rate, target_sample_rate)])
 
+    def pitch_shift(self, n_steps:float = None, bins_per_octave = 12, res_type='kaiser_best'):
+        ''' Shift the pitch of the waveform by n_steps semitones '''
+
+        assert n_steps is not None, 'n_steps is required to pitch shift'
+        return Audio().populate(librosa.effects.pitch_shift(self.data, sr = self.sample_rate, n_steps = n_steps), self.sample_rate, self.source_path, self.operations + [f'[pitch_shift {n_steps}]'])
+
+    def time_stretch(self, rate: float = None):
+        ''' Time-stretch an audio series by a fixed rate. '''
+
+        assert rate is not None, 'rate is required'
+        assert rate != 0, 'rate must not be zero'
+
+        return Audio().populate(librosa.effects.time_stretch(self.data, rate), self.sample_rate, self.source_path, self.operations + [f'[time_stretch {rate}]'])
+
     def populate(self, data, sample_rate, source_path, operations = []):
         ''' Common utility method to store the audio data and calculate base details '''
 
@@ -301,6 +315,25 @@ class Audio(object):
         S = librosa.core.stft(d, n_fft = n_fft, hop_length = hop_length)
     
         return S
+
+    def get_mel_spectrogram_array(self, start:int = 0, stop:int = None, n_fft:int=1024, hop_length:int = None, n_mels:int = 60, mode:str = 'power'):
+
+        ''' Retrieve a Numpy array containing the STFT of the audio signal in the mel scale '''
+        assert mode in ['power', 'dB'], 'Expecting mode = \'power\' or \'dB\''
+
+        d, t = slice_audio(self.data, start, stop, self.sample_rate)
+
+        if hop_length is None:
+            hop_length = int(n_ftt / 2)
+        
+        S = librosa.feature.melspectrogram(d, sr= self.sample_rate, n_fft = n_fft, hop_length = hop_length, n_mels = n_mels)
+        if mode == 'power':
+            return S
+        if mode == 'dB':
+            s_DB = librosa.power_to_db(S, ref=np.max)
+            return s_DB
+        
+        return None
 
     def get_spectrogram_array_uint8(self, start:int = 0, stop:int = None, n_fft:int=1024, hop_length:int = None, mode: str = 'linear'):
         ''' Retrieve a Numpy array containing the STFT of the audio signal, sacled to 0-255 range '''
