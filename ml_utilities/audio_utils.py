@@ -8,6 +8,8 @@ from librosa.display import specshow
 from IPython.display import Audio as AudioPlay
 from ml_utilities.noise_utils import white, blue, pink, violet, brown
 
+audio_extensions = ['.WAV','.wav']
+
 # Operation labels which track what has happened to an audio sample
 _trimOperation = lambda start, stop : f'trim [{str(start)}:{str(stop)}]'
 _resampleOperation = lambda original, target : f'resample [{str(original)}:{target}]'
@@ -29,6 +31,11 @@ _cmap = 'magma'
 #     stats = transformer.stats(input_filepath = source_path)
 #     return stat, stats
 
+def remove_extension(filename):
+    for x in audio_extensions:
+        filename = filename.replace(x, '')
+    return filename
+
 def slice_audio(data, start, stop, sample_rate):
     s = data[start:stop]
     start = start if start is not None and start >=0 and start < len(s) -1 else 0
@@ -48,6 +55,8 @@ class Audio(object):
 
     @classmethod
     def load_audio(cls, source_path, start = 0, stop = None):
+        assert os.path.exists(source_path), 'Audio file doesn\'t exist'
+
         o = cls()
 
         data, sample_rate = soundfile.read(source_path, start = start, stop = stop)
@@ -201,25 +210,29 @@ class Audio(object):
         plt.ylabel('Amplitude')
         plt.show()
 
-    def plot_linear_spectrogram(self, start:int = 0, stop:int = None, nperseg:int = 1024, noverlap = None, to_file:str = None, window = 'hann', cmap = _cmap):
+    def plot_linear_spectrogram(self, start:int = 0, stop:int = None, n_fft:int = 1024, hop_length = None, window = 'hann', cmap = _cmap, to_file:str = None):
         ''' Plots a spectrogram with a linear frequency y-axis '''
 
         assert self.samples is not None and self.samples > 0, 'Not loaded'
 
-        data_subset = np.array(self.data)[start:stop]
-        duration = len(data_subset) / self.sample_rate
+        d, t = slice_audio(self.data, start, stop,  self.sample_rate)
         
         scaling_factor = 7
-        D = librosa.amplitude_to_db(np.abs(librosa.stft(data_subset)), ref=np.max)
+        D = librosa.amplitude_to_db(np.abs(librosa.stft(d, n_fft=n_fft, hop_length=hop_length, window=window)), ref=np.max)
+        
         #  plt.figure(figsize=[duration * 2 * scaling_factor, scaling_factor])
+        
         plt.subplot(111)
-        librosa.display.specshow(D, y_axis='linear', sr=self.sample_rate, cmap = cmap, x_axis='time', )
+        librosa.display.specshow(D, y_axis='linear', sr=self.sample_rate, cmap = cmap, x_axis='time')
         plt.colorbar(format='%+2.0f db')
         plt.title(f'Linear Spectrogram of {os.path.basename(self.source_path)}[{start}:{stop}] window {window}')
         plt.xlabel('Time [sec]')
         plt.ylabel('Frequency [Hz]')
 
-        plt.show()
+        if to_file is not None:
+            plt.savefig(to_file)
+        else:
+            plt.show()
 
     def plot_mel_spectrogram(self, start:int = 0, stop:int = None, n_fft:int= 1024, n_mels:int = 128, hop_length:int = None, to_file: str = None, cmap = _cmap):
         ''' Plots a spectrogram using a non-linear mel scale for the y-axis and power density for the peak color detail '''
@@ -239,7 +252,10 @@ class Audio(object):
         specshow(mels, x_axis='time', y_axis='mel', sr=self.sample_rate,  fmax=self.sample_rate / 2, cmap=cmap) 
         plt.title('Mel-frequency spectrogram in power density') 
 
-        plt.show()
+        if to_file is not None:
+            plt.savefig(to_file)
+        else:
+            plt.show()
     
     def plot_mel_dB_spectrogram(self, start:int = 0, stop:int = None, n_fft:int= 1024, n_mels:int = 128, hop_length:int = None, to_file: str = None, cmap = _cmap):
         ''' Plots a spectrogram using a non-linear mel scale for the y-axis, and dB scale for the peak color detail '''
@@ -260,8 +276,11 @@ class Audio(object):
         specshow(S_dB, x_axis='time', y_axis='mel', sr=self.sample_rate,  fmax=self.sample_rate / 2, cmap = cmap) 
         plt.title('Mel-frequency spectrogram in dB')
         plt.colorbar(format='%+2.0f dB') 
-
-        plt.show()
+        
+        if to_file is not None:
+            plt.savefig(to_file)
+        else:
+            plt.show()
 
     def get_spectrogram_array(self, start:int = 0, stop:int = None, n_fft:int=1024, hop_length:int = None, mode: str = 'linear'):
         ''' Retrieve a Numpy array containing the STFT of the audio signal '''

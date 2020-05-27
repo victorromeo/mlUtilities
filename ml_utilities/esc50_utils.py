@@ -1,5 +1,4 @@
 from ml_utilities import Audio
-
 import os, sys, librosa, csv, parse
 import numpy as np
 
@@ -101,7 +100,7 @@ class ESC50(object):
                 if len(errors) > 0:
                     print(f'{row["filename"]} incorrect. {", ".join(errors)}')
 
-    def to_mnist(self, train_folds=[], test_folds=[], cache_path:str = None, n_fft = 1024, hop_length = None):
+    def to_mnist(self, train_folds=[], test_folds=[], cache_path:str = None, n_fft = 1024, hop_length = None, flatten = True):
         
         # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         # x_train = arrays of data in [0:255] range
@@ -123,7 +122,8 @@ class ESC50(object):
             if audio is None:
                 continue
             
-            x_train.append(audio.get_spectrogram_array_uint8(n_fft = n_fft, hop_length = hop_length))
+            spectrogram = audio.get_spectrogram_array_uint8(n_ftt = n_fft, hop_length = hop_length)
+            x_test.append(np.reshape(len(spectrogram)) if flatten else spectrogram)
             y_train.append(target)
 
         for test_record in [x for x in all_records if x[0] in test_folds]:
@@ -134,10 +134,41 @@ class ESC50(object):
             if audio is None:
                 continue
 
-            x_test.append(audio.get_spectrogram_array_uint8(n_ftt = n_fft, hop_length = hop_length))
+            spectrogram = audio.get_spectrogram_array_uint8(n_ftt = n_fft, hop_length = hop_length)
+            x_test.append(np.reshape(len(spectrogram)) if flatten else spectrogram)
             y_test.append(target)
 
         return x_train, y_train, x_test, y_test
 
+    def generate_spectrograms(dest_path:str = None, dest_exists_ok = False, scale_mode = 'linear', image_exists_mode = 'replace'):
+        if dest_path is None:
+            dest_path = os.path.join(self.audio_path, 'spectrograms')
         
-    
+        try:
+            os.makedirs(dest_path, exist_ok=dest_exists_ok)
+        except:
+            raise Exception(f'Destination path already exists: {dest_path}')
+
+        scale_modes = {
+            'linear': lambda src,dest : Audio.load_audio(src).plot_linear_spectrogram(to_file=dest),
+            'mel': lambda src,dest : Audio.load_audio(src).plot_mel_spectrogram(to_file=dest),
+            'med_dB' : lambda src, dest : Audio.load_audio(src).plot_mel_dB_spectrogram(to_file=dest)
+        }
+
+        for audio_file in audio_files():
+
+            audio = self.get_audio(audio_file)
+
+            if audio is None:
+                continue
+        
+            basename = audio_file.replace('.WAV','').replace('.wav','')
+
+            dest_file = os.path.join(dest_path, f'{basename}.png')
+            if os.path.exists(dest_file):
+                if image_exists_mode == 'skip':
+                    continue
+                elif image_exists_mode == 'error':
+                    raise Exception(f'Spectrogram already exists: {dest_file}')
+
+            scale_modes[scale_mode](src,dest)

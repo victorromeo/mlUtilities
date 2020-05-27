@@ -71,7 +71,7 @@ def bipolar_rectified_linear_unit(x, i = None):
         ''' Iterable solution '''
         assert i is None, f'Evaluating iterable brelu requires index i be None'
         return relu(x) * np.resize([1,-1], len(x))
-    else
+    else:
         ''' Non-iterable solution '''
         assert i is not None, f'Evaluating non-iterable brelu requires index i'
         return relu(x) if i % 2 == 0 else relu(x) * -1
