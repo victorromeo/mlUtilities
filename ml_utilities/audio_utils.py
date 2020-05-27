@@ -1,4 +1,4 @@
-import os, sox, math
+import os, math
 import numpy as np
 from scipy.signal import butter, lfilter, windows, sawtooth, square, sosfilt
 from scipy.signal import spectrogram as linear_spectrogram
@@ -24,12 +24,6 @@ _insertOperation = lambda a, b, offset, match : f'insert[{a.source_path},{b.sour
 _plotScaling = lambda data, sample_rate, scaling_factor=6 : [int((len(data) / sample_rate) * scaling_factor * 0.4), int((len(data) / sample_rate) * scaling_factor * 0.1)]
 
 _cmap = 'magma'
-
-# def get_audio_statistics(source_path):
-#     transformer = sox.transform.Transformer()
-#     stat = transformer.stat(input_filepath = source_path)
-#     stats = transformer.stats(input_filepath = source_path)
-#     return stat, stats
 
 def remove_extension(filename):
     for x in audio_extensions:
