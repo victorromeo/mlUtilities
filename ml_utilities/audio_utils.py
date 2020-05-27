@@ -30,12 +30,10 @@ _cmap = 'magma'
 #     return stat, stats
 
 def slice_audio(data, start, stop, sample_rate):
-    print(f'preslice: {data.shape} {start} {stop} {sample_rate}')
     s = data[start:stop]
     start = start if start is not None and start >=0 and start < len(s) -1 else 0
     stop = stop if stop is not None and stop > 0 and stop < len(s) else len(s) - 1
     t = np.linspace(start/sample_rate, stop/sample_rate, len(s))
-    print(f'slice: {data.shape} > {s.shape} {start} {stop} {t.shape} {sample_rate}')
     return s, t
 
 class Audio(object):
@@ -96,6 +94,7 @@ class Audio(object):
 
         tone_generator = {
             'sine': lambda fs,t : np.sin(2 * np.pi * fs * t),
+            'cosine': lambda fs,t : np.cos(2 * np.pi * fs * t),
             'sawtooth' : lambda fs,t: sawtooth(2 * np.pi * fs * t),
             'square' : lambda fs,t: square(2* np.pi * fs * t)
         }
