@@ -1,3 +1,5 @@
+from ml_utilities import Audio
+
 import os, sys, librosa, csv, parse
 import numpy as np
 
@@ -11,23 +13,34 @@ filter_on_unique = lambda items, unique = True : np.unique(items) if unique else
 
 class ESC50(object):
     def __init__(self, dataset_path):
+        ''' Initialises this representation of the ESC50 like repository '''
         self.base_path = dataset_path
         self.audio_path = os.path.join(self.base_path, 'audio')
         self.meta_path = os.path.join(self.base_path, 'meta')
-        self.meta, self.fieldnames = self.get_meta_file()
+        self.meta, self.meta_fieldnames = self.get_meta_data()
         self.audio_files = self.get_audio_files()
         self.validate_meta()
 
     def get_audio_files(self):
         ''' Returns a list of audio file dir_entry objects '''
-        return sorted([x for x in os.scandir(self.audio_path) if file_with_extension(audio_extensions)], key = by_name)
+
+        return sorted([x for x in os.scandir(self.audio_path) if file_with_extension(x, audio_extensions)], key = by_name)
     
+    def get_audio(self, filename):
+        filepath = os.path.join(self.audio_path, filename)
+        if os.path.exists(filepath):
+            return Audio.load_audio(filepath)
+
+        return None
+
     def get_meta_file(self):
         ''' Returns a dir_entry to the meta file '''
-        meta_files = sorted([x for x in os.scandir(self.meta_path) if file_with_extension(meta_extensions)])
+
+        meta_files = sorted([x for x in os.scandir(self.meta_path) if file_with_extension(x, meta_extensions)])
         return meta_files[0]
 
     def get_meta_data(self):
+        ''' Read the csv meta file '''
         meta_file = self.get_meta_file()
 
         meta = []
@@ -41,24 +54,32 @@ class ESC50(object):
         return meta, fieldnames
 
     def get_filenames(self, unique = False):
+        ''' Return the 'filename' column only, from the csv meta file '''
         return filter_on_unique([x['filename'] for x in self.meta], unique= unique)
 
     def get_folds(self, unique = False):
+        ''' Return the 'fold' column only, from the csv meta file '''
         return filter_on_unique([int(x['fold']) for x in self.meta], unique= unique)
     
     def get_targets(self, unique = False):
+        ''' Return the 'target' (class) column only, from the csv meta file '''
         return filter_on_unique([int(x['target']) for x in self.meta], unique= unique)
 
     def get_categories(self, unique = False):
+        ''' Return the 'category' column only, from the csv meta file '''
         return filter_on_unique([x['category'] for x in self.meta], unique= unique)
 
     def get_esc10s(self, unique = False):
+        ''' Return the ESC10 column only, from the csv meta file '''
         return filter_on_unique([x['category'] for x in self.meta], unique= unique)
     
     def get_takes(self, unique = False):
+        ''' Return the 'take' column only, from the csv meta file '''
         return filter_on_unique([x['category'] for x in self.meta], unique= unique)
 
     def validate_meta(self):
+        ''' Iteratively validate the meta csv file to ensure the ESC50 records are accurate '''
+
         assert len(self.meta) > 0, 'No meta files were found'
         assert len(self.audio_files) <= len(self.meta), 'More audio than meta records were found'
         assert len(self.meta) <= len(self.audio_files), 'More meta records than audio were found' 
@@ -80,11 +101,43 @@ class ESC50(object):
                 if len(errors) > 0:
                     print(f'{row["filename"]} incorrect. {", ".join(errors)}')
 
-    def to_mnist(self, cache_path,  resolution_x, resolution_y):
+    def to_mnist(self, train_folds=[], test_folds=[], cache_path:str = None, n_fft = 1024, hop_length = None):
+        
         # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         # x_train = arrays of data in [0:255] range
         # y_train = label (class)
-        return None
+
+        all_records = zip(self.get_folds(), self.get_filenames(), self.get_targets())
+        
+        x_train = []
+        y_train = []
+        
+        x_test = []
+        y_test = []
+
+        for train_record in [x for x in all_records if x[0] in train_folds]:
+            filename = train_record[1]
+            target = train_record[2]
+
+            audio = self.get_audio(filename)
+            if audio is None:
+                continue
+            
+            x_train.append(audio.get_spectrogram_array_uint8(n_fft = n_fft, hop_length = hop_length))
+            y_train.append(target)
+
+        for test_record in [x for x in all_records if x[0] in test_folds]:
+            filename = test_record[1]
+            target = test_record[2]
+
+            audio = self.get_audio(filename)
+            if audio is None:
+                continue
+
+            x_test.append(audio.get_spectrogram_array_uint8(n_ftt = n_fft, hop_length = hop_length))
+            y_test.append(target)
+
+        return x_train, y_train, x_test, y_test
 
         
     
