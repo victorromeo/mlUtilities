@@ -121,7 +121,7 @@ class ESC50(object):
         if hop_length is None:
             hop_length = int(n_fft / 4)
 
-        all_records = zip(self.get_folds(), self.get_filenames(), self.get_targets())
+        all_records = list(zip(self.get_folds(), self.get_filenames(), self.get_targets()))
         
         x_train = []
         y_train = []
@@ -132,7 +132,8 @@ class ESC50(object):
         shape = None
     
         for folds, x, y in [(train_folds, x_train, y_train), (test_folds, x_test, y_test)]:
-            for fold, filename, target in [r for r in all_records if int(r[0]) in folds]:
+            print(f'folds {folds} {x} {y}')
+            for fold, filename, target in [r for r in all_records if r[0] in folds]:
                 audio = self.get_audio(filename)
 
                 if audio is None:
