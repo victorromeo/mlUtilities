@@ -1,7 +1,7 @@
 h5py==2.10.0
+numpy==1.18.3
 librosa==0.7.2
 mat73==0.40
-numpy==1.18.3
 parse==1.15.0
 pytest==5.4.2
 scikit-learn==0.23.0
