@@ -1,6 +1,7 @@
 from ml_utilities import Audio
-import os, sys, librosa, csv, parse
+import os, sys, librosa, csv, parse, pickle
 import numpy as np
+import tqdm as tqdm
 
 audio_extensions = ('.wav')
 meta_extensions = ('.csv')
@@ -105,6 +106,17 @@ class ESC50(object):
         # (x_train, y_train), (x_test, y_test) = tf.keras.datasets.mnist.load_data()
         # x_train = arrays of data in [0:255] range
         # y_train = label (class)
+        
+        #Setup Caching
+        cache_training_fold: str = "".join([str(x) for x in train_folds])
+        cache_testing_fold: str = "".join([str(x) for x in test_folds])
+        cache_file = f'mnist_{str(n_fft)}_{str(hop_length)}_{str(int(flatten))}_{cache_training_fold}_{cache_testing_fold}.pkl'
+        cache_filename = os.path.join(cache_path, cache_file)
+
+        if cache_path is not None:
+            if os.path.exists(cache_filename):
+                with open(cache_filename, 'rb') as f:
+                    return pickle.load(f) 
 
         if hop_length is None:
             hop_length = int(n_fft / 4)
@@ -120,7 +132,7 @@ class ESC50(object):
         shape = None
     
         for folds, x, y in [(train_folds, x_train, y_train), (test_folds, x_test, y_test)]:
-            for fold, filename, target in [x for x in all_records if x[0] in folds]:
+            for fold, filename, target in [r for r in all_records if int(r[0]) in folds]:
                 audio = self.get_audio(filename)
 
                 if audio is None:
@@ -131,9 +143,13 @@ class ESC50(object):
                 x.append(spectrogram.flatten() if flatten else spectrogram)
                 y.append(target)
 
+        if cache_path is not None:
+            with open(cache_filename, 'wb') as f:
+                pickle.dump((x_train, y_train, x_test,y_test, shape), f)
+
         return x_train, y_train, x_test, y_test, shape
 
-    def generate_spectrograms(dest_path:str = None, dest_exists_ok = False, scale_mode = 'linear', image_exists_mode = 'replace'):
+    def generate_spectrograms(self, dest_path:str = None, n_fft = 1024, hop_length = None, cmap:str = 'gray_r', raw:bool=True, y_axis = 'linear', dest_exists_ok = False,  image_exists_mode = 'replace'):
         if dest_path is None:
             dest_path = os.path.join(self.audio_path, 'spectrograms')
         
@@ -142,26 +158,22 @@ class ESC50(object):
         except:
             raise Exception(f'Destination path already exists: {dest_path}')
 
-        scale_modes = {
-            'linear': lambda src,dest : Audio.load_audio(src).plot_linear_spectrogram(to_file=dest),
-            'mel': lambda src,dest : Audio.load_audio(src).plot_mel_spectrogram(to_file=dest),
-            'med_dB' : lambda src, dest : Audio.load_audio(src).plot_mel_dB_spectrogram(to_file=dest)
-        }
-
-        for audio_file in audio_files():
-
-            audio = self.get_audio(audio_file)
-
-            if audio is None:
-                continue
-        
-            basename = audio_file.replace('.WAV','').replace('.wav','')
-
+        for audio_file in tqdm.tqdm(self.audio_files):
+            # Calculate the destination filename
+            basename = audio_file.name.replace('.WAV','').replace('.wav','')
             dest_file = os.path.join(dest_path, f'{basename}.png')
+
+            # Determine whether to proceed
             if os.path.exists(dest_file):
                 if image_exists_mode == 'skip':
                     continue
                 elif image_exists_mode == 'error':
                     raise Exception(f'Spectrogram already exists: {dest_file}')
-
-            scale_modes[scale_mode](src,dest)
+            
+            # Load Audio
+            audio = self.get_audio(audio_file)
+            if audio is None:
+                continue
+            
+            # Generate Spectrogram
+            audio.plot_spectrogram(to_file=dest_file, n_fft=n_fft, hop_length=hop_length, y_axis=y_axis, raw=True, cmap=cmap)

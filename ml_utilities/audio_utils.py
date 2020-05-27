@@ -210,10 +210,10 @@ class Audio(object):
         plt.ylabel('Amplitude')
         plt.show()
 
-    def plot_linear_spectrogram(self, start:int = 0, stop:int = None, n_fft:int = 1024, hop_length = None, window = 'hann', cmap = _cmap, to_file:str = None):
+    def plot_spectrogram(self, start:int = 0, stop:int = None, y_axis:str= 'linear', n_fft:int = 1024, hop_length = None, window = 'hann', cmap = _cmap, to_file:str = None, raw = False):
         ''' Plots a spectrogram with a linear frequency y-axis '''
-
         assert self.samples is not None and self.samples > 0, 'Not loaded'
+        assert y_axis in ['linear','fft','hz','log','mel','cqt_hz','cqt_note'], f'Invalid y_axis: {y_axis}'
 
         d, t = slice_audio(self.data, start, stop,  self.sample_rate)
         
@@ -223,17 +223,25 @@ class Audio(object):
         #  plt.figure(figsize=[duration * 2 * scaling_factor, scaling_factor])
         
         plt.subplot(111)
-        librosa.display.specshow(D, y_axis='linear', sr=self.sample_rate, cmap = cmap, x_axis='time')
-        plt.colorbar(format='%+2.0f db')
-        plt.title(f'Linear Spectrogram of {os.path.basename(self.source_path)}[{start}:{stop}] window {window}')
-        plt.xlabel('Time [sec]')
-        plt.ylabel('Frequency [Hz]')
+        librosa.display.specshow(D, y_axis=y_axis, sr=self.sample_rate, cmap = cmap, x_axis='time')
+        
+        if raw:
+            plt.axis('off')
+        else:
+            plt.colorbar(format='%+2.0f db')
+            plt.title(f'{os.path.basename(self.source_path)}[{start}:{stop}]\n{y_axis} window {window}')
+            plt.xlabel('Time [sec]')
+            plt.ylabel('Frequency [Hz]')
 
         if to_file is not None:
-            plt.savefig(to_file)
+            plt.savefig(to_file, bbox_inches='tight' if raw else None, pad_inches = 0 if raw else None)
+            plt.close()
         else:
             plt.show()
-
+    
+    def plot_linear_spectrogram(self, start:int = 0, stop:int = None, n_fft:int = 1024, hop_length = None, window = 'hann', cmap = _cmap, to_file:str = None, raw = False):
+        self.plot_spectrogram(start,stop,'linear',n_fft,hop_length,window,cmap,to_file,raw)
+    
     def plot_mel_spectrogram(self, start:int = 0, stop:int = None, n_fft:int= 1024, n_mels:int = 128, hop_length:int = None, to_file: str = None, cmap = _cmap):
         ''' Plots a spectrogram using a non-linear mel scale for the y-axis and power density for the peak color detail '''
 
