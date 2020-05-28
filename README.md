@@ -31,18 +31,36 @@ x_train, y_train, s_train, x_test, y_test, s_test = esc50.to_mnist(train_folds= 
 Uses preset of 22050 Hz sample rate, 60 melfilter banks, 1024 fft window length, 512 fft hop, 12 data augmentations including time_stretching and pitch shifting
 
 ```python
-import os
+%cd /content
 
-if not os.path.exists('ml_utilities')
-    !git clone https://github.com/victorromeo/mlUtilities.git ml_utilities
-if not os.path.exists('ml_utilities/sets/ESC50')
-    !git clone https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
-!pip install -q -r ml_utilities/requirements.txt
+import os
+import numpy as np
+
+# Download and install prerequisites
+if not os.path.exists('ml_utilities'):
+    !git clone --quiet https://github.com/victorromeo/mlUtilities.git ml_utilities
+if not os.path.exists('ml_utilities/sets/ESC50'):
+    !git clone --quiet https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
+%cd /content/ml_utilities
+!pip install -q -r requirements.txt
 
 from ml_utilities.esc50_utils import ESC50
 
-preprocessed = esc50.generate_jonnor_mel_spectrograms(cache_path='ml_utilties/sets')
+# Load ESC dataset
+esc50 = ESC50('/content/ml_utilities/sets/ESC50')
+
+# Preprocess audio into spectrogram numpy arrays using mel scale
+preprocessed = esc50.generate_jonnor_mel_spectrograms(cache_path='/content/ml_utilties/sets')
+
+# Generate MNIST output
 x_train, y_train, s_train, x_test, y_test, s_test = esc50.generate_jonnor_mnist(preprocessed, train_folds= [1,2,3,4], test_folds=[5])
+
+# Save outputs
+with open('/content/ml_utilties/sets/jonnor_esc50_1024_512_mel.npy', 'wb') as f:
+    np.save(f, np.array(preprocessed))
+
+with open('/content/ml_utilties/sets/jonnor_mnist_esc50_1024_512_mel.npy', 'wb') as f:
+    np.save(f, np.array((x_train,y_train,s_train,x_test,y_test,s_test)))
 ```
 
 ### Notebooks for worked examples
