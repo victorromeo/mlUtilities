@@ -24,7 +24,7 @@ esc50 = ESC50('ml_utilities/sets/ESC50')
 esc50.to_mnist()
 ```
 
-### Example of ESC50 Jonnor preset MNIST conversion from ESC50
+### Example of conversion from ESC50 to MNIST using Jonnor presets
 
 Uses preset of 22050 Hz sample rate, 60 melfilter banks, 1024 fft window length, 512 fft hop, 12 data augmentations including time_stretching and pitch shifting
 
@@ -38,7 +38,7 @@ if not os.path.exists('ml_utilities/sets/ESC50')
 !pip install -q -r ml_utilities/requirements.txt
 from ml_utilities.esc50_utils import ESC50
 
-preprocessed = esc50.generate_jonnor_mel_spectrograms(cache_path='/Volumes/Samsung_T5/tests/')
+preprocessed = esc50.generate_jonnor_mel_spectrograms(cache_path='ml_utilties/sets')
 x_train, y_train, s_train, x_test, y_test, s_test = esc50.generate_jonnor_mnist(preprocessed, train_folds= [1,2,3,4], test_folds=[5])
 ```
 
