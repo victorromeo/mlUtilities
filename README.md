@@ -6,7 +6,7 @@ A suite of common utilities to support machine learning data collation, inferenc
 
 To validate datasets, prepare new datasets and generate fake data, this collection of utilities assists Audio analysis. Examples to demonstrate use of functions listed below include:
 
-## Examples
+## Examples (Assumed use of Google Colab)
 
 ### Example of MNIST generation from ESC50
 
@@ -61,6 +61,32 @@ with open('/content/ml_utilties/sets/jonnor_esc50_1024_512_mel.npy', 'wb') as f:
 
 with open('/content/ml_utilties/sets/jonnor_mnist_esc50_1024_512_mel.npy', 'wb') as f:
     np.save(f, np.array((x_train,y_train,s_train,x_test,y_test,s_test)))
+```
+
+### Example of Spectrogram generation into ESC50/Audio/spectrograms folder
+
+```python
+%cd /content
+
+import os
+import numpy as np
+
+# Download and install prerequisites
+if not os.path.exists('ml_utilities'):
+    !git clone --quiet https://github.com/victorromeo/mlUtilities.git ml_utilities
+if not os.path.exists('ml_utilities/sets/ESC50'):
+    !git clone --quiet https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
+%cd /content/ml_utilities
+!pip install -q -r requirements.txt
+
+from ml_utilities.esc50_utils import ESC50
+
+# Load ESC dataset
+esc50 = ESC50('/content/ml_utilities/sets/ESC50')
+
+# Generate spectrogram images in ESC50/Audio/spectrograms folder
+# destination can be specified using argument dest_path='/<fullpath>'
+esc50.generate_spectrograms(n_fft=1024,hop_length=512,cmap='gray_r',raw=True,y_axis='linear',dest_exists_ok=True, image_exists_mode='skip')
 ```
 
 ### Notebooks for worked examples
