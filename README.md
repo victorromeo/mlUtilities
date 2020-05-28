@@ -6,10 +6,48 @@ A suite of common utilities to support machine learning data collation, inferenc
 
 To validate datasets, prepare new datasets and generate fake data, this collection of utilities assists Audio analysis. Examples to demonstrate use of functions listed below include:
 
-- audio_examples.ipynb
-- deepsqueak_examples.ipynb
-- esc50_examples.ipynb
-- jonnor_examples.ipynb
+## Examples
+
+### Example of MNIST generation from ESC50
+
+```python
+import os
+if not os.path.exists('ml_utilities')
+    !git clone https://github.com/victorromeo/mlUtilities.git ml_utilities
+if not os.path.exists('ml_utilities/sets/ESC50')
+    !git clone https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
+
+!pip install -q -r ml_utilities/requirements.txt
+from ml_utilities.esc50_utils import ESC50
+
+esc50 = ESC50('ml_utilities/sets/ESC50')
+esc50.to_mnist()
+```
+
+### Example of ESC50 Jonnor preset MNIST conversion from ESC50
+
+Uses preset of 22050 Hz sample rate, 60 melfilter banks, 1024 fft window length, 512 fft hop, 12 data augmentations including time_stretching and pitch shifting
+
+```python
+import os
+
+if not os.path.exists('ml_utilities')
+    !git clone https://github.com/victorromeo/mlUtilities.git ml_utilities
+if not os.path.exists('ml_utilities/sets/ESC50')
+    !git clone https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
+!pip install -q -r ml_utilities/requirements.txt
+from ml_utilities.esc50_utils import ESC50
+
+preprocessed = esc50.generate_jonnor_mel_spectrograms(cache_path='/Volumes/Samsung_T5/tests/')
+x_train, y_train, s_train, x_test, y_test, s_test = esc50.generate_jonnor_mnist(preprocessed, train_folds= [1,2,3,4], test_folds=[5])
+```
+
+### Notebooks for worked examples
+
+- [audio_examples.ipynb](https://github.com/victorromeo/mlUtilities/blob/master/audio_examples.ipynb)
+- [deepsqueak_examples.ipynb](https://github.com/victorromeo/mlUtilities/blob/master/deepsqueak_examples.ipynb)
+- [esc50_examples.ipynb](https://github.com/victorromeo/mlUtilities/blob/master/esc50_examples.ipynb)
+- [jonnor_examples.ipynb](https://github.com/victorromeo/mlUtilities/blob/master/jonnor_examples.ipynb)
 
 ## Contents
 
