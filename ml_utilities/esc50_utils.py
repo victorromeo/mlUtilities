@@ -260,11 +260,13 @@ class ESC50(object):
 
         _filename = ''
 
-        results = []
+        results = list([(fold, filename, target, category, take, spectrogram, settings) for (fold, filename, target, category, take, spectrogram, settings) in all_records if spectrogram is not None and len(spectrogram) > 0])
+        remaining = list([(fold, filename, target, category, take, spectrogram, settings) for (fold, filename, target, category, take, spectrogram, settings) in all_records if spectrogram is None or len(spectrogram) == 0])
 
         # Iteratively preprocess the records
-        for fold, filename, target, category, take, spectrogram, settings in tqdm(all_records, desc='Setting'):
+        for fold, filename, target, category, take, spectrogram, settings in tqdm(remaining, desc='Setting'):
             if spectrogram is not None and len(spectrogram) > 0:
+                results.append((fold, filename, target, category, take, spectrogram, settings))
                 continue
             
             if _filename != filename:
@@ -298,3 +300,27 @@ class ESC50(object):
                 pickle.dump(results, f)
 
         return results
+
+    def generate_jonnor_mnist(self, preprocessed, train_folds = [1,2,3,4],test_folds = [5]):
+        scale_spectrogram = lambda S: (S * 255.0 / S.max()).astype('uint8')
+
+        x_train = []
+        y_train = []
+        s_train = []
+        x_test = []
+        y_test = []
+        s_test = []
+
+        for fold, filename, target, category, take, spectrogram, settings in preprocessed:
+            d = scale_spectrogram(spectrogram).flatten()
+            if fold in train_folds:
+                x_train.append(d)
+                y_train.append(target)
+                s_train.append(spectrogram.shape)
+            elif fold in test_folds:
+                x_test.append(d)
+                y_test.append(target)
+                s_test.append(spectrogram.shape)
+
+        return x_train, y_train, s_train, x_test, y_test, s_test
+
