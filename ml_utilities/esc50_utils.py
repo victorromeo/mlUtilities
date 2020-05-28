@@ -3,6 +3,9 @@ import os, sys, librosa, csv, parse, pickle
 import numpy as np
 from tqdm.auto import tqdm
 
+import warnings
+warnings.filterwarnings('ignore')
+
 audio_extensions = ('.wav')
 meta_extensions = ('.csv')
 
@@ -116,6 +119,7 @@ class ESC50(object):
         cache_filename = os.path.join(cache_path, cache_file)
 
         if cache_path is not None:
+            print(f'Caching: {cache_filename}')
             if os.path.exists(cache_filename):
                 with open(cache_filename, 'rb') as f:
                     return pickle.load(f) 
@@ -123,17 +127,17 @@ class ESC50(object):
         if hop_length is None:
             hop_length = int(n_fft / 4)
 
-        all_records = list(zip(np.empty(len()), self.get_folds(), self.get_filenames(), self.get_targets(), self.get_categories(), self.get_takes()))
+        all_records = list(zip(self.get_folds(), self.get_filenames(), self.get_targets()))
         
         x_train = []
         y_train = []
+        s_train = []
         
         x_test = []
         y_test = []
+        s_test = []
 
-        shape = None
-    
-        for folds, x, y in tqdm([(train_folds, x_train, y_train), (test_folds, x_test, y_test)], desc='Fold'):
+        for folds, x, y, s in tqdm([(train_folds, x_train, y_train, s_train), (test_folds, x_test, y_test, s_test)], desc='Fold'):
             for fold, filename, target in tqdm([r for r in all_records if int(r[0]) in folds], desc='File'):
                 audio = self.get_audio(filename)
 
@@ -141,15 +145,16 @@ class ESC50(object):
                     continue
                 
                 spectrogram = audio.get_spectrogram_array_uint8(n_fft = n_fft, hop_length = hop_length)
-                shape = spectrogram.shape
+                
                 x.append(spectrogram.flatten() if flatten else spectrogram)
                 y.append(target)
+                s.append(spectrogram.shape)
 
         if cache_path is not None:
             with open(cache_filename, 'wb') as f:
-                pickle.dump((x_train, y_train, x_test,y_test, shape), f)
+                pickle.dump((x_train, y_train, s_train, x_test, y_test, s_test), f)
 
-        return x_train, y_train, x_test, y_test, shape
+        return x_train, y_train, s_train, x_test, y_test, s_test
 
     def generate_spectrograms(self, dest_path:str = None, n_fft = 1024, hop_length = None, cmap:str = 'gray_r', raw:bool=True, y_axis = 'linear', dest_exists_ok = False,  image_exists_mode = 'replace'):
         if dest_path is None:
