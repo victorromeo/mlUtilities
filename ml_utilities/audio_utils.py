@@ -185,7 +185,7 @@ class Audio(object):
         }
 
         data = amplifier[mode](self.data, level)
-        return Audio().populate(data, self.sample_rate, self.source_path, self.operations + [_gainOperation(self,  mode)])
+        return Audio().populate(data, self.sample_rate, self.source_path, self.operations + [_gainOperation(level,  mode)])
 
     def mix(self, audio, left = 1.0, right = 1.0, mode:str = 'additive'):
         ''' Combines two audio records into a single source, with an optional mix rate '''
