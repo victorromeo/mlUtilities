@@ -16,12 +16,12 @@ if not os.path.exists('ml_utilities')
     !git clone https://github.com/victorromeo/mlUtilities.git ml_utilities
 if not os.path.exists('ml_utilities/sets/ESC50')
     !git clone https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
-
 !pip install -q -r ml_utilities/requirements.txt
+
 from ml_utilities.esc50_utils import ESC50
 
 esc50 = ESC50('ml_utilities/sets/ESC50')
-esc50.to_mnist()
+esc50.to_mnist(train_folds= [1,2,3,4], test_folds=[5], n_fft=1024, hop_length=512, cache_path='ml_utilities/sets' )
 ```
 
 ### Example of conversion from ESC50 to MNIST using Jonnor presets
@@ -36,6 +36,7 @@ if not os.path.exists('ml_utilities')
 if not os.path.exists('ml_utilities/sets/ESC50')
     !git clone https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
 !pip install -q -r ml_utilities/requirements.txt
+
 from ml_utilities.esc50_utils import ESC50
 
 preprocessed = esc50.generate_jonnor_mel_spectrograms(cache_path='ml_utilties/sets')
