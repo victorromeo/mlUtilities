@@ -13,9 +13,9 @@ To validate datasets, prepare new datasets and generate fake data, this collecti
 ```python
 %cd /content
 import os
-if not os.path.exists('ml_utilities')
+if not os.path.exists('ml_utilities'):
     !git clone --quiet https://github.com/victorromeo/mlUtilities.git ml_utilities
-if not os.path.exists('ml_utilities/sets/ESC50')
+if not os.path.exists('ml_utilities/sets/ESC50'):
     !git clone --quiet https://github.com/karolpiczak/ESC-50.git ml_utilities/sets/ESC50
 %cd /content/ml_utilities
 !pip install -q -r requirements.txt
@@ -23,7 +23,7 @@ if not os.path.exists('ml_utilities/sets/ESC50')
 from ml_utilities.esc50_utils import ESC50
 
 esc50 = ESC50('/content/ml_utilities/sets/ESC50')
-esc50.to_mnist(train_folds= [1,2,3,4], test_folds=[5], n_fft=1024, hop_length=512, cache_path='/content/ml_utilities/sets' )
+x_train, y_train, s_train, x_test, y_test, s_test = esc50.to_mnist(train_folds= [1,2,3,4], test_folds=[5], n_fft=1024, hop_length=512, cache_path='/content/ml_utilities/sets' )
 ```
 
 ### Example of conversion from ESC50 to MNIST using Jonnor presets
