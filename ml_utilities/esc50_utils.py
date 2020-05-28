@@ -19,6 +19,7 @@ class ESC50(object):
         self.meta_path = os.path.join(self.base_path, 'meta')
         self.meta, self.meta_fieldnames = self.get_meta_data()
         self.audio_files = self.get_audio_files()
+        self.meta_count = len(self.audio_files)
         self.validate_meta()
 
     def get_audio_files(self):
@@ -122,7 +123,7 @@ class ESC50(object):
         if hop_length is None:
             hop_length = int(n_fft / 4)
 
-        all_records = zip(self.get_folds(), self.get_filenames(), self.get_targets())
+        all_records = list(zip(np.empty(len()), self.get_folds(), self.get_filenames(), self.get_targets(), self.get_categories(), self.get_takes()))
         
         x_train = []
         y_train = []
@@ -179,7 +180,7 @@ class ESC50(object):
             # Generate Spectrogram
             audio.plot_spectrogram(to_file=dest_file, n_fft=n_fft, hop_length=hop_length, y_axis=y_axis, raw=True, cmap=cmap)
     
-    def generate_jonnor_mel_spectrograms(self, cache_path:str = None, train_folds = [], test_folds = []):
+    def generate_jonnor_mel_spectrograms(self, cache_path:str = None):
         # https://github.com/jonnor/ESC-CNN-microcontroller/releases/download/print1/report-print1.pdf
         target_sample_rate = 22050
         melfilter_bands = 60
@@ -190,6 +191,7 @@ class ESC50(object):
         # Jonnor paper suggests using 12 variations of Data Augmentation
         # During preprocessing, Data Augmentation is also performed. Time-stretching and Pitchshifting was done following [74], for a total of 12 variations per sample. The preprocessed
         # mel-spectrograms are stored on disk as Numpy arrays for use during training
+        # Note: (ITW) No specific mention of which 12 variations are described, and as a result time_stretching, pitch_shifting_1 and pitch_shifting_2 are assumed.
 
         # [74] https://arxiv.org/pdf/1608.04363.pdf
         # • Time Stretching (TS): slow down or speed up the audio
@@ -234,67 +236,65 @@ class ESC50(object):
             fft_hop = int(n_fft / 4)
 
         #Setup Caching
-        cache_training_fold: str = "".join([str(x) for x in train_folds])
-        cache_testing_fold: str = "".join([str(x) for x in test_folds])
-
-        cache_file = f'jonnor_{str(fft_length)}_{str(fft_hop)}_{str(int(flatten))}_{cache_training_fold}_{cache_testing_fold}.pkl'
+        cache_file = f'jonnor_{fft_length}_{fft_hop}_{melfilter_bands}.pkl'
         cache_filename = os.path.join(cache_path, cache_file)
 
-        all_records = list(zip(self.get_folds(), self.get_filenames(), self.get_targets()))
-        progress = []
-
-        x_train = []
-        y_train = []
-        s_train = []
-
-        x_test = []
-        y_test = []
-        s_test = []
+        all_records = []
 
         # Attempt cache load
         if cache_path is not None:
             os.makedirs(cache_path, exist_ok=True)
             if os.path.exists(cache_filename):
                 with open(cache_filename, 'rb') as f:
-                    x_train, y_train, s_train, x_test, y_test, s_test, progress = pickle.load(f) 
-        
-        def _generate_and_append(audio):
-            spectrogram = audio.get_mel_spectrogram_array(n_fft = fft_length, hop_length = fft_hop, n_mels = melfilter_bands)
+                    all_records = pickle.load(f) 
+
+        # Create the meta_set, if it was not in the cache
+        if len(all_records) == 0:
+            all_meta_records = list(zip(self.get_folds(), self.get_filenames(), self.get_targets(), self.get_categories(), self.get_takes()))
+            combinations = [(0,1)] + [(0, ts) for ts in time_stretching] + [(ps, 1) for ps in pitch_shifting_1] + [(ps, 1) for ps in pitch_shifting_2]
+            for fold, filename, target, category, take in all_meta_records:
+                for ps, ts in combinations:
+                    spectrogram = None
+                    settings = (ps, ts)
+                    all_records.append((fold, filename, target, category, take, spectrogram, settings))
+
+        _filename = ''
+
+        results = []
+
+        # Iteratively preprocess the records
+        for fold, filename, target, category, take, spectrogram, settings in tqdm(all_records, desc='Setting'):
+            if spectrogram is not None and len(spectrogram) > 0:
+                continue
             
-            x.append(spectrogram.flatten() if flatten else spectrogram)
-            y.append(target)
-            s.append(spectrogram.shape)
-
-        def _save_pickle():
-            if cache_path is not None:
-                with open(cache_filename, 'wb') as f:
-                    pickle.dump((x_train, y_train, s_train, x_test, y_test, s_test, progress), f)
-
-        with tqdm(total = len(all_records), desc='File') as q:
-            for folds, x, y, s in [(train_folds, x_train, y_train, s_train), (test_folds, x_test, y_test, s_test)]:
-                for fold, filename, target in list([r for r in all_records if int(r[0]) in folds]):
-                    if filename in progress:
-                        q.update(1)
-                        continue
+            if _filename != filename:
+                # Save the pickle, when the audio file changes
+                if cache_path is not None:
+                    with open(cache_filename, 'wb') as f:
+                        pickle.dump(results, f)
                 
-                    audio = self.get_audio(filename)
+                audio = self.get_audio(filename).resample(target_sample_rate)
+                _filename = filename
 
-                    if audio is None:
-                        q.update(1)
-                        continue
-                    
-                    _generate_and_append(audio)
-                    for ts in time_stretching:
-                        _generate_and_append(audio.time_stretch(rate = ts))
-                    
-                    for ps in pitch_shifting_1:
-                        _generate_and_append(audio.pitch_shift(n_steps = ps))
-                    
-                    for ps in pitch_shifting_2:
-                        _generate_and_append(audio.pitch_shift(n_steps = ps))
+            ps, ts = settings
+            if ps == 0 and ts == 1:
+                spectrogram = audio.get_mel_spectrogram_array(n_fft = fft_length, hop_length = fft_hop, n_mels = melfilter_bands)
 
-                    progress.append(filename)
-                    _save_pickle()
-                    q.update(1)
+            elif ps != 0 and ts != 1:
+                spectrogram = audio.pitch_shift(ps).time_stretch(ts).get_mel_spectrogram_array(n_fft = fft_length, hop_length = fft_hop, n_mels = melfilter_bands)
 
-        return x_train, y_train, s_train, x_test, y_test, s_test
+            elif ps != 0:
+                spectrogram = audio.pitch_shift(ps).get_mel_spectrogram_array(n_fft = fft_length, hop_length = fft_hop, n_mels = melfilter_bands)
+
+            elif ts != 0:
+                spectrogram = audio.time_stretch(ts).get_mel_spectrogram_array(n_fft = fft_length, hop_length = fft_hop, n_mels = melfilter_bands)
+            else:
+                print(f'Unknown setting {setting}')
+
+            results.append((fold, filename, target, category, take, spectrogram, settings))
+
+        if cache_path is not None:
+            with open(cache_filename, 'wb') as f:
+                pickle.dump(results, f)
+
+        return results
