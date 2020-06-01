@@ -115,8 +115,8 @@ def bulk_analysis(detect_folder, audio_folder):
     all_accepts = []
 
     for j in tqdm.tqdm(joined):
-      d_f = os.path.join(detect_path, j['detect'])
-      a_f = os.path.join(audio_path, j['audio'])
+      d_f = os.path.join(detect_folder, j['detect'])
+      a_f = os.path.join(audio_folder, j['audio'])
       ds = DeepSqueak(d_f, a_f)
 
       for call_number in range(ds.get_call_count()):
