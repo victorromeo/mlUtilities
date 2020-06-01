@@ -1,4 +1,4 @@
-import mat73, h5py, os
+import mat73, h5py, os, pickle
 from ml_utilities import Audio
 import matplotlib.pyplot as plt
 import tqdm.auto as tqdm
@@ -184,3 +184,21 @@ def plot_call_boundary(all_boxes, all_scores, all_power, all_accepts):
     ax6.set_title('Call Height')
     ax6.set_xlabel('Frequency (kHz)')
     ax6.set_ylabel('Detections')
+
+def build_detect_analysis(detect_folder, audio_folder, results_folder, result_name = 'detect.pkl'):
+    analysis_path = os.path.join(results_folder, result_name)
+    
+    analysis = None
+
+    if os.path.exists(analysis_path):
+        # Load the analysis
+        with open(analysis_path, 'rb') as f:
+            analysis = pickle.load(f)
+
+    if analysis is None:
+        # Create the analysis
+        analysis = bulk_analysis(detect_folder=detect_folder, audio_folder=audio_folder)
+        with open(analysis_path, 'wb') as f:
+            pickle.dump(analysis, f)
+
+    return analysis
