@@ -1,5 +1,6 @@
-import mat73, h5py
+import mat73, h5py, os
 from ml_utilities import Audio
+import tqdm.auto as tqdm
 
 def read_matlab(mat_path):
     def conv(path=''):
@@ -60,11 +61,13 @@ def read_calls(mat_path):
     return Calls
 
 class DeepSqueak():
+    audio:Audio = None
+
     def __init__(self, mat_path, audio_path):
         self.mat_path = mat_path
         self.audio_path = audio_path
         self.Calls = read_calls(mat_path)
-        self.audio = Audio.load_audio(audio_path)
+        self.audio = None
 
     def get_call_count(self):
         return self.Calls['calls']
@@ -77,10 +80,49 @@ class DeepSqueak():
 
         return box, power, score, accept
 
-    def get_audio(self, n: int):
+    def get_audio(self):
+        if self.audio is None:
+            self.audio = Audio.load_audio(audio_path)
+        return self.audio
+    
+    def get_call_audio_box(self, n: int):
         box, power, score, accept = self.get_call(n)
         start_time, min_freq, width_time, height_freq = box
 
-        return self.audio.get_sample_box(start_time, min_freq* 1000, width_time, height_freq * 1000)
-    
+        return self.get_audio().get_sample_box(start_time, min_freq* 1000, width_time, height_freq * 1000)
+  
+def bulk_analysis(detect_folder, audio_folder):
+    remove_wav = lambda x : x.replace('.wav','').replace('.WAV','')
+    remove_mat = lambda x : x.replace('.mat','')
 
+    audio_files = [audio_file.name for audio_file in os.scandir(audio_folder) if audio_file.name.endswith(('.wav','.WAV'))]
+    detect_files = [detect_file.name for detect_file in os.scandir(detect_folder) if detect_file.name.endswith(('.mat'))]
+
+    joined = []
+    for a_f in audio_files:
+      for d_f in detect_files:
+        if d_f.startswith(remove_wav(a_f)):
+          joined.append({
+              'audio': a_f,
+              'detect': d_f
+          })
+    
+    all_scores = []
+    all_power = []
+    all_boxes = []
+    all_accepts = []
+
+    for j in tqdm.tqdm(joined):
+      d_f = os.path.join(detect_path, j['detect'])
+      a_f = os.path.join(audio_path, j['audio'])
+      ds = DeepSqueak(d_f, a_f)
+
+      for call_number in range(ds.get_call_count()):
+        box, power, score, accept = ds.get_call(call_number)
+        all_scores.append(score)
+        all_power.append(power)
+        all_accepts.append(accept)
+        all_boxes.append(box)
+    
+    return joined, (all_boxes, all_scores, all_power, all_accepts)
+    
