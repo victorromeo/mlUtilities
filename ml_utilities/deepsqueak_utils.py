@@ -135,17 +135,17 @@ def plot_call_quality(all_boxes, all_scores, all_power, all_accepts):
     fig.set_figwidth(15)
 
     ax1.hist(all_scores, color='lightblue', edgecolor='black', bins=int(180/5))
-    ax1.set_title('Histogram of Scores')
+    ax1.set_title('Histogram of Call Scores')
     ax1.set_xlabel('Score')
     ax1.set_ylabel('Detections')
 
     ax2.hist(all_power, color='lightblue', edgecolor='black', bins=int(180/5))
-    ax2.set_title('Histogram of Scores')
+    ax2.set_title('Histogram of Call Power')
     ax2.set_xlabel('Power')
     ax2.set_ylabel('Detections')
 
     ax3.hist(all_accepts, color='lightblue', edgecolor='black', bins=int(180/5))
-    ax3.set_title('Histogram of Accept')
+    ax3.set_title('Histogram of Call Accept')
     ax3.set_xlabel('Accept int(bool)')
     ax3.set_ylabel('Detections')
     
@@ -153,7 +153,7 @@ def plot_call_boundary(all_boxes, all_scores, all_power, all_accepts):
     ''' Plots histograms for the call boundary boxes '''
     fig, ((ax1, ax2, ax3), (ax4, ax5, ax6)) = plt.subplots(2, 3)
     fig.set_figheight(10)
-    fig.set_figwidth(14)
+    fig.set_figwidth(15)
 
     ax1.hist([b[0] for b in all_boxes], color='lightblue', edgecolor='black', bins=int(180/5))
     ax1.set_title('Call Start Time')
