@@ -1,4 +1,4 @@
-import mat73, h5py, os, pickle
+import mat73, h5py, os, pickle, sox
 from ml_utilities import Audio
 import matplotlib.pyplot as plt
 import tqdm.auto as tqdm
@@ -185,8 +185,10 @@ def plot_call_boundary(all_boxes, all_scores, all_power, all_accepts):
     ax6.set_xlabel('Frequency (kHz)')
     ax6.set_ylabel('Detections')
 
-def build_detect_analysis(detect_folder, audio_folder, results_folder, result_name = 'detect.pkl'):
-    analysis_path = os.path.join(results_folder, result_name)
+def build_detect_analysis(detect_folder, audio_folder, results_folder):
+    detect_name = os.path.basename(detect_folder)
+    
+    analysis_path = os.path.join(results_folder, f'ds_{detect_name}_info.pkl')
     
     analysis = None
 
@@ -202,3 +204,22 @@ def build_detect_analysis(detect_folder, audio_folder, results_folder, result_na
             pickle.dump(analysis, f)
 
     return analysis
+
+def build_audio_analysis(joined, audio_folder, results_folder, results_name = 'audio_info.pkl'):
+    ''' Analyse all audio files, to get basic audio stats'''
+    
+    analysis_path = os.path.join(results_folder, results_name)
+    analysis = None
+    if os.path.exists(analysis_path):
+        # Load the analysis
+        with open(analysis_path, 'rb') as f:
+            analysis = pickle.load(f)
+            
+    if analysis is None:
+        # Create the analysis
+        analysis = [sox.transform.file_info.info(os.path.join(audio_folder, item['audio'])) for item in tqdm.tqdm(joined)]
+        with open(analysis_path, 'wb') as f:
+             pickle.dump(analysis, f)
+    
+    return analysis
+    
