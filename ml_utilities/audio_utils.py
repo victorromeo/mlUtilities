@@ -35,7 +35,7 @@ def slice_audio(data, start, stop, sample_rate):
     start = start if start is not None and start >=0 and start < len(s) -1 else 0
     stop = stop if stop is not None and stop > 0 and stop < len(s) else len(s) - 1
     t = np.linspace(start/sample_rate, stop/sample_rate, len(s))
-    return s, t
+    return s, t     
 
 class Audio(object):
     operations:[] = []
@@ -298,17 +298,24 @@ class Audio(object):
         else:
             plt.show()
 
-    def get_spectrogram_array(self, start:int = 0, stop:int = None, n_fft:int=1024, hop_length:int = None, mode: str = 'linear'):
+    def get_spectrogram_array(self, start:int = 0, stop:int = None, n_fft:int=1024, hop_length:int = None, mode: str = 'amplitude'):
         ''' Retrieve a Numpy array containing the STFT of the audio signal '''
 
-        d, t = slice_audio(self.data, start, stop,  self.sample_rate)
+        assert mode in ['amplitude', 'power', 'dB'], 'Expected amplitude, power or dB'
+
+        y, t = slice_audio(self.data, start, stop,  self.sample_rate)
 
         if hop_length is None:
             hop_length = int(n_fft / 2)
 
-        S = librosa.core.stft(d, n_fft = n_fft, hop_length = hop_length)
-    
-        return S
+        S = librosa.core.stft(y, n_fft = n_fft, hop_length = hop_length)
+        
+        if mode == 'amplitude':
+            return S
+        if mode == 'power':
+            return S ** 2
+        if mode == 'dB':
+            return librosa.amplitude_to_db(S, ref=np.max)
 
     def get_mel_spectrogram_array(self, start:int = 0, stop:int = None, n_fft:int=1024, hop_length:int = None, n_mels:int = 60, mode:str = 'power'):
 
@@ -328,13 +335,6 @@ class Audio(object):
             return s_DB
         
         return None
-
-    def get_spectrogram_array_uint8(self, start:int = 0, stop:int = None, n_fft:int=1024, hop_length:int = None, mode: str = 'linear'):
-        ''' Retrieve a Numpy array containing the STFT of the audio signal, sacled to 0-255 range '''
-        
-        S = self.get_spectrogram_array(start,stop,n_fft,hop_length,mode)
-
-        return (S * 255.0 / S.max()).astype('uint8')
 
     def get_sample_box(self, start_time:float, min_freq: float, width_time: float, height_freq: float):
         ''' Extracts a sample of an audio file, in a rectangular shape from the frequency-time domains '''

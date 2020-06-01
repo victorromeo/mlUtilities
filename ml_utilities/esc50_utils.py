@@ -1,10 +1,7 @@
-from ml_utilities import Audio
+from ml_utilities import Audio, normalise, to_log_scale, to_uint8
 import os, sys, librosa, csv, parse, pickle
 import numpy as np
 from tqdm.auto import tqdm
-
-import warnings
-warnings.filterwarnings('ignore')
 
 audio_extensions = ('.wav')
 meta_extensions = ('.csv')
@@ -144,9 +141,18 @@ class ESC50(object):
                 if audio is None:
                     continue
                 
-                spectrogram = audio.get_spectrogram_array_uint8(n_fft = n_fft, hop_length = hop_length)
+                # Get a Numpy array of the spectrogram
+                spectrogram = audio.get_spectrogram_array(n_fft = n_fft, hop_length = hop_length, mode = 'dB')
                 
-                x.append(spectrogram.flatten() if flatten else spectrogram)
+                # Normalise - Subtract mean and divide by Standard deviation
+                spectrogram = to_uint8(spectrogram)
+                
+                # Flatten  spectrogram if required and store
+                if flatten:
+                    x.append(spectrogram.flatten())
+                else:
+                    x.append(spectrogram)
+
                 y.append(target)
                 s.append(spectrogram.shape)
 
@@ -307,8 +313,6 @@ class ESC50(object):
         return results
 
     def generate_jonnor_mnist(self, preprocessed, train_folds = [1,2,3,4],test_folds = [5]):
-        scale_spectrogram = lambda S: (S * 255.0 / S.max()).astype('uint8')
-
         x_train = []
         y_train = []
         s_train = []
@@ -317,7 +321,7 @@ class ESC50(object):
         s_test = []
 
         for fold, filename, target, category, take, spectrogram, settings in preprocessed:
-            d = scale_spectrogram(spectrogram).flatten()
+            d = to_uint8(spectrogram).flatten()
             if fold in train_folds:
                 x_train.append(d)
                 y_train.append(target)
