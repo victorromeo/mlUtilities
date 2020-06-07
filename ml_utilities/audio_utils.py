@@ -30,12 +30,13 @@ def remove_extension(filename):
         filename = filename.replace(x, '')
     return filename
 
+# TODO Move slice as a formal replacement for Trim with operation tracking
 def slice_audio(data, start, stop, sample_rate):
     s = data[start:stop]
     start = start if start is not None and start >=0 and start < len(s) -1 else 0
     stop = stop if stop is not None and stop > 0 and stop < len(s) else len(s) - 1
     t = np.linspace(start/sample_rate, stop/sample_rate, len(s))
-    return s, t     
+    return s, t
 
 class Audio(object):
     operations:[] = []
@@ -208,10 +209,8 @@ class Audio(object):
         assert self.samples is not None and self.samples > 0, 'Not loaded'
 
         d, t = slice_audio(self.data, start, stop, self.sample_rate)
-        # plt.figure(figsize=_plotScaling(d, self.sample_rate))
-        plt.subplot(111)
 
-        # librosa.display.waveplot(y = d, sr = self.sample_rate)
+        plt.subplot(111)
 
         plt.plot(t, d)
         plt.xlabel('Time (seconds)')
@@ -225,10 +224,7 @@ class Audio(object):
 
         d, t = slice_audio(self.data, start, stop,  self.sample_rate)
         
-        scaling_factor = 7
         D = librosa.amplitude_to_db(np.abs(librosa.stft(d, n_fft=n_fft, hop_length=hop_length, window=window)), ref=np.max)
-        
-        #  plt.figure(figsize=[duration * 2 * scaling_factor, scaling_factor])
         
         plt.subplot(111)
         librosa.display.specshow(D, y_axis=y_axis, sr=self.sample_rate, cmap = cmap, x_axis='time')
@@ -263,7 +259,6 @@ class Audio(object):
         mels = librosa.feature.melspectrogram(d, int(self.sample_rate), n_fft=int(n_fft), n_mels= int(n_mels), hop_length=int(hop_length))
         mels = np.log(mels + 1e-9) # add small number to avoid log(0)
         
-        # plt.figure(figsize=_plotScaling(d, self.sample_rate))
         plt.subplot(111)
         specshow(mels, x_axis='time', y_axis='mel', sr=self.sample_rate,  fmax=self.sample_rate / 2, cmap=cmap) 
         plt.title('Mel-frequency spectrogram in power density') 
@@ -287,7 +282,7 @@ class Audio(object):
         mels = np.log(mels + 1e-9) # add small number to avoid log(0)
 
         S_dB = librosa.power_to_db(mels, ref=np.max) 
-        # plt.figure(figsize=_plotScaling(d, self.sample_rate))
+
         plt.subplot(111)
         specshow(S_dB, x_axis='time', y_axis='mel', sr=self.sample_rate,  fmax=self.sample_rate / 2, cmap = cmap) 
         plt.title('Mel-frequency spectrogram in dB')
@@ -325,7 +320,7 @@ class Audio(object):
         d, t = slice_audio(self.data, start, stop, self.sample_rate)
 
         if hop_length is None:
-            hop_length = int(n_ftt / 2)
+            hop_length = int(n_fft / 2)
         
         S = librosa.feature.melspectrogram(d, sr= self.sample_rate, n_fft = n_fft, hop_length = hop_length, n_mels = n_mels)
         if mode == 'power':
@@ -354,7 +349,7 @@ class Audio(object):
             'Samples': self.samples,
             'Sample rate': self.sample_rate,
             'Duration' : self.samples / self.sample_rate,
-            'Mean norm': abs(self.data).mean(), # also knonw as DC offset
+            'Mean norm': abs(self.data).mean(), # also known as DC offset
             'RMS amplitude': math.sqrt(np.sum(self.data ** 2) / self.samples)
         } 
 
