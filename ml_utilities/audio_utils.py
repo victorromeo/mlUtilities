@@ -49,13 +49,16 @@ class Audio(object):
         self.samples = None
 
     @classmethod
-    def load_audio(cls, source_path, start = 0, stop = None):
+    def load_audio(cls, source_path, start = 0, stop = None, channels = None):
         assert os.path.exists(source_path), 'Audio file doesn\'t exist'
 
         o = cls()
 
         data, sample_rate = soundfile.read(source_path, start = start, stop = stop)
-        
+        print(data.shape)
+        if channels == 1 and len(data.shape) > 1 and data.shape[1] == 2:
+            data = (data[:,0] + data[:,1]) / 2
+
         operations = [f'load {source_path}']
 
         if start != 0 or stop != None:
