@@ -9,7 +9,7 @@ def to_uint8(S, low = 0, high = 255):
     return _scale_array(S, max(low,0), min(high,255)).astype('uint8')
 
 def to_int8(S, low = -128, high = 127):
-    return _scale_array(S, max(low,0), min(high,255)).astype('int8')
+    return _scale_array(S, max(low,-128), min(high,255)).astype('int8')
 
 def to_uint16(S, low = 0, high = 65535):
     return _scale_array(S, max(low,0), min(high,65535)).astype('uint16')
